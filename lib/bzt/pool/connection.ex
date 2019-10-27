@@ -2,6 +2,7 @@ defmodule Bzt.Pool.Connection do
   use GenStage
 
   def start_link(opts) do
+    IO.inspect("starting connection....")
     GenStage.start_link(__MODULE__, opts)
   end
 

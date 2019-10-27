@@ -3,10 +3,15 @@ defmodule Bzt.Pool.ConnectionSupervisor do
   alias Bzt.Registry
   alias Bzt.Pool.{Connection, RequestQueue}
 
-  def start_link([name: name] = opts) do
-    opts = Keyword.update!(opts, :name, &Registry.via_tuple(__MODULE__, &1))
-    connection_supervisor = DynamicSupervisor.start_link(__MODULE__, :ok, opts)
-    {:ok, _child_pid} = start_connection(name, [])
+  def start_link([config: config] = opts) do
+    name = config.name
+
+    connection_supervisor =
+      DynamicSupervisor.start_link(__MODULE__, config, name: Registry.via_tuple(__MODULE__, name))
+
+    Enum.each(1..config.min_connections, fn _i ->
+      {:ok, _child_pid} = start_connection(name, [])
+    end)
 
     connection_supervisor
   end
@@ -20,8 +25,9 @@ defmodule Bzt.Pool.ConnectionSupervisor do
   end
 
   @impl true
-  def init(:ok) do
+  def init(config) do
     DynamicSupervisor.init(
+      max_children: config.max_connections,
       strategy: :one_for_one,
       extra_arguments: []
     )

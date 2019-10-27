@@ -6,8 +6,8 @@ defmodule Bzt.PoolsSupervisor do
     DynamicSupervisor.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  def start_pool(opts) do
-    DynamicSupervisor.start_child(__MODULE__, {Supervisor, opts})
+  def start_pool(config) do
+    DynamicSupervisor.start_child(__MODULE__, {Supervisor, config: config})
   end
 
   @impl true
