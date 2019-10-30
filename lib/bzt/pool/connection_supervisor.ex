@@ -3,7 +3,7 @@ defmodule Bzt.Pool.ConnectionSupervisor do
   alias Bzt.Registry
   alias Bzt.Pool.{Connection, RequestQueue}
 
-  def start_link([config: config] = opts) do
+  def start_link(config: config) do
     name = config.name
 
     connection_supervisor =
@@ -17,11 +17,14 @@ defmodule Bzt.Pool.ConnectionSupervisor do
   end
 
   def start_connection(name, args) do
-    [{connection_supervisor, nil}] = Registry.lookup(__MODULE__, name)
-    [{request_queue, nil}] = Registry.lookup(RequestQueue, name)
-
-    spec = {Connection, Keyword.put(args, :subscribe_to, request_queue)}
-    DynamicSupervisor.start_child(connection_supervisor, spec)
+    with connection_supervisor when is_pid(connection_supervisor) <-
+           fetch_connection_supervisor(name),
+         request_queue when is_pid(request_queue) <- RequestQueue.fetch_request_queue(name) do
+      spec = {Connection, Keyword.put(args, :subscribe_to, request_queue)}
+      DynamicSupervisor.start_child(connection_supervisor, spec)
+    else
+      error -> {:error, :connection_failed_to_start}
+    end
   end
 
   @impl true
@@ -31,5 +34,12 @@ defmodule Bzt.Pool.ConnectionSupervisor do
       strategy: :one_for_one,
       extra_arguments: []
     )
+  end
+
+  def fetch_connection_supervisor(name) do
+    case Registry.lookup(__MODULE__, name) do
+      [] -> nil
+      [{process, _v}] -> process
+    end
   end
 end

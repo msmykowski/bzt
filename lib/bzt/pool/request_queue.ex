@@ -16,6 +16,13 @@ defmodule Bzt.Pool.RequestQueue do
     GenStage.cast(pid, {:push, event})
   end
 
+  def fetch_request_queue(name) do
+    case Registry.lookup(__MODULE__, name) do
+      [] -> nil
+      [{process, _v}] -> process
+    end
+  end
+
   def handle_cast({:push, event}, {queue, pending_demand}) do
     queue = :queue.in(event, queue)
     dispatch_events(queue, pending_demand, [])
